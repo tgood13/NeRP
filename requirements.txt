@@ -6,3 +6,4 @@ torchvision
 tensorboardX
 scikit-image
 tqdm
+matplotlib
