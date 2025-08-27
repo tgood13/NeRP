@@ -15,7 +15,6 @@ from tqdm import tqdm
 from networks import Positional_Encoder, FFN, SIREN
 from utils import get_config, prepare_sub_folder, get_data_loader, ct_parallel_project_2d_batch
 
-
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', type=str, default='', help='Path to the config file.')
 parser.add_argument('--output_path', type=str, default='.', help="outputs path")
@@ -30,18 +29,18 @@ cudnn.benchmark = True
 # Setup output folder
 output_folder = os.path.splitext(os.path.basename(opts.config))[0]
 model_name = os.path.join(output_folder, config['data'] + '/slice{}_img{}_{}_{}_{}_{}_{}_lr{:.2g}_encoder_{}' \
-    .format(config['img_slice'], config['img_size'], config['model'], \
-        config['net']['network_input_size'], config['net']['network_width'], \
-        config['net']['network_depth'], config['loss'], config['lr'], config['encoder']['embedding']))
-if not(config['encoder']['embedding'] == 'none'):
+                          .format(config['img_slice'], config['img_size'], config['model'], \
+                                  config['net']['network_input_size'], config['net']['network_width'], \
+                                  config['net']['network_depth'], config['loss'], config['lr'],
+                                  config['encoder']['embedding']))
+if not (config['encoder']['embedding'] == 'none'):
     model_name += '_scale{}_size{}'.format(config['encoder']['scale'], config['encoder']['embedding_size'])
 print(model_name)
 
 train_writer = tensorboardX.SummaryWriter(os.path.join(opts.output_path + "/logs", model_name))
 output_directory = os.path.join(opts.output_path + "/outputs", model_name)
 checkpoint_directory, image_directory = prepare_sub_folder(output_directory)
-shutil.copy(opts.config, os.path.join(output_directory, 'config.yaml')) # copy config file to output folder
-
+shutil.copy(opts.config, os.path.join(output_directory, 'config.yaml'))  # copy config file to output folder
 
 # Setup input encoder:
 encoder = Positional_Encoder(config['encoder'])
@@ -53,12 +52,13 @@ elif config['model'] == 'FFN':
     model = FFN(config['net'])
 else:
     raise NotImplementedError
-model.cuda()
+# model.cuda()
 model.train()
 
 # Setup optimizer
 if config['optimizer'] == 'Adam':
-    optim = torch.optim.Adam(model.parameters(), lr=config['lr'], betas=(config['beta1'], config['beta2']), weight_decay=config['weight_decay'])
+    optim = torch.optim.Adam(model.parameters(), lr=config['lr'], betas=(config['beta1'], config['beta2']),
+                             weight_decay=config['weight_decay'])
 else:
     NotImplementedError
 
@@ -70,23 +70,24 @@ elif config['loss'] == 'L1':
 else:
     raise NotImplementedError
 
-
 # Setup data loader
 print('Load image: {}'.format(config['img_path']))
-data_loader = get_data_loader(config['data'], config['img_path'], config['img_size'], config['img_slice'], train=True, batch_size=config['batch_size'])
+data_loader = get_data_loader(config['data'], config['img_path'], config['img_size'], config['img_slice'], train=True,
+                              batch_size=config['batch_size'])
 
 for it, (grid, image) in enumerate(data_loader):
     # Input coordinates (x,y) grid and target image
-    grid = grid.cuda()  # [bs, h, w, 2], [0, 1]
-    image = image.cuda()  # [bs, h, w, c], [0, 1]
+    # grid = grid.cuda()  # [bs, h, w, 2], [0, 1]
+    # image = image.cuda()  # [bs, h, w, c], [0, 1]
 
-    # Data loading 
+    # Data loading
     # Change training inputs for downsampling image
     test_data = (grid, image)
     train_data = (grid, image)
 
     torchvision.utils.save_image(test_data[1].cpu().permute(0, 3, 1, 2).data, os.path.join(image_directory, "test.png"))
-    torchvision.utils.save_image(train_data[1].cpu().permute(0, 3, 1, 2).data, os.path.join(image_directory, "train.png"))
+    torchvision.utils.save_image(train_data[1].cpu().permute(0, 3, 1, 2).data,
+                                 os.path.join(image_directory, "train.png"))
 
     # Train model
     for iterations in range(max_iter):
@@ -107,7 +108,8 @@ for it, (grid, image) in enumerate(data_loader):
 
             train_writer.add_scalar('train_loss', train_loss, iterations + 1)
             train_writer.add_scalar('train_psnr', train_psnr, iterations + 1)
-            print("[Iteration: {}/{}] Train loss: {:.4g} | Train psnr: {:.4g}".format(iterations + 1, max_iter, train_loss, train_psnr))
+            print("[Iteration: {}/{}] Train loss: {:.4g} | Train psnr: {:.4g}".format(iterations + 1, max_iter,
+                                                                                      train_loss, train_psnr))
 
         # Compute testing psnr
         if (iterations + 1) % config['val_iter'] == 0:
@@ -123,8 +125,12 @@ for it, (grid, image) in enumerate(data_loader):
             train_writer.add_scalar('test_loss', test_loss, iterations + 1)
             train_writer.add_scalar('test_psnr', test_psnr, iterations + 1)
             # Must transfer to .cpu() tensor firstly for saving images
-            torchvision.utils.save_image(test_output.cpu().permute(0, 3, 1, 2).data, os.path.join(image_directory, "recon_{}_{:.4g}dB.png".format(iterations + 1, test_psnr)))
-            print("[Validation Iteration: {}/{}] Test loss: {:.4g} | Test psnr: {:.4g}".format(iterations + 1, max_iter, test_loss, test_psnr))
+            torchvision.utils.save_image(test_output.cpu().permute(0, 3, 1, 2).data, os.path.join(image_directory,
+                                                                                                  "recon_{}_{:.4g}dB.png".format(
+                                                                                                      iterations + 1,
+                                                                                                      test_psnr)))
+            print("[Validation Iteration: {}/{}] Test loss: {:.4g} | Test psnr: {:.4g}".format(iterations + 1, max_iter,
+                                                                                               test_loss, test_psnr))
 
     # Save final model
     model_name = os.path.join(checkpoint_directory, 'model_%06d.pt' % (iterations + 1))
@@ -132,7 +138,6 @@ for it, (grid, image) in enumerate(data_loader):
                 'enc': encoder.B, \
                 'opt': optim.state_dict(), \
                 }, model_name)
-
 
 # grid, image = ds[0]
 # grid = grid.unsqueeze(0).to(device)
@@ -159,4 +164,4 @@ for it, (grid, image) in enumerate(data_loader):
 # # print(train_data[1].shape)
 # train_data = (grid[:, index_y, :, :][:, :, index_x, :], image[:, index_y, :, :][:, :, index_x, :])
 # print(train_data[1].shape)
-   
+

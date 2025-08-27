@@ -14,7 +14,7 @@ import numpy as np
 from networks import Positional_Encoder, FFN, SIREN
 from utils import get_config, prepare_sub_folder, get_data_loader, save_image_3d
 from ct_geometry_projector import ConeBeam3DProjector
-from skimage.measure import compare_ssim
+from skimage.metrics import structural_similarity
 
 
 parser = argparse.ArgumentParser()
@@ -58,7 +58,7 @@ elif config['model'] == 'FFN':
     model = FFN(config['net'])
 else:
     raise NotImplementedError
-model.cuda()
+#model.cuda()
 model.train()
 
 # Load pretrain model
@@ -100,8 +100,8 @@ ct_projector = ConeBeam3DProjector(config['img_size'], config['proj_size'], conf
 
 for it, (grid, image) in enumerate(data_loader):
     # Input coordinates (x,y) grid and target image
-    grid = grid.cuda()  # [bs, z, x, y, 3], [0, 1]
-    image = image.cuda()  # [bs, z, x, y, 1], [0, 1]
+    #grid = grid.cuda()  # [bs, z, x, y, 3], [0, 1]
+    #image = image.cuda()  # [bs, z, x, y, 1], [0, 1]
     print(grid.shape, image.shape)
 
     projs = ct_projector.forward_project(image.transpose(1, 4).squeeze(1))  # [bs, x, y, z] -> [bs, n, h, w]
@@ -119,7 +119,7 @@ for it, (grid, image) in enumerate(data_loader):
     save_image_3d(test_data[1], slice_idx, os.path.join(image_directory, "test.png"))
     save_image_3d(train_data[1].transpose(2, 3).unsqueeze(-1), proj_idx, os.path.join(image_directory, "train.png"))
     
-    fbp_recon_ssim = compare_ssim(fbp_recon.squeeze().cpu().numpy(), test_data[1].transpose(1,4).squeeze().cpu().numpy(), multichannel=True)  # [x, y, z] # treat the last dimension of the array as channels
+    fbp_recon_ssim = structural_similarity(fbp_recon.squeeze().cpu().numpy(), test_data[1].transpose(1,4).squeeze().cpu().numpy(), multichannel=True)  # [x, y, z] # treat the last dimension of the array as channels
     fbp_recon = fbp_recon.unsqueeze(1).transpose(1, 4)  # [bs, z, x, y, 1]
     fbp_recon_psnr = - 10 * torch.log10(loss_fn(fbp_recon, test_data[1]))
     save_image_3d(fbp_recon, slice_idx, os.path.join(image_directory, "fbp_recon_{:.4g}dB_ssim{:.4g}.png".format(fbp_recon_psnr, fbp_recon_ssim)))
@@ -158,7 +158,7 @@ for it, (grid, image) in enumerate(data_loader):
                 test_psnr = - 10 * torch.log10(2 * test_loss).item()
                 test_loss = test_loss.item()
 
-                test_ssim = compare_ssim(test_output.transpose(1,4).squeeze().cpu().numpy(), test_data[1].transpose(1,4).squeeze().cpu().numpy(), multichannel=True)
+                test_ssim = structural_similarity(test_output.transpose(1,4).squeeze().cpu().numpy(), test_data[1].transpose(1,4).squeeze().cpu().numpy(), multichannel=True)
 
             train_writer.add_scalar('test_loss', test_loss, iterations + 1)
             train_writer.add_scalar('test_psnr', test_psnr, iterations + 1)

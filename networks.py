@@ -10,7 +10,7 @@ class Positional_Encoder():
     def __init__(self, params):
         if params['embedding'] == 'gauss':
             self.B = torch.randn((params['embedding_size'], params['coordinates_size'])) * params['scale']
-            self.B = self.B.cuda()
+            #self.B = self.B.cuda()
         else:
             raise NotImplementedError
 

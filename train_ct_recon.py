@@ -57,7 +57,7 @@ elif config['model'] == 'FFN':
     model = FFN(config['net'])
 else:
     raise NotImplementedError
-model.cuda()
+#model.cuda()
 model.train()
 
 # Load pretrain model
@@ -92,12 +92,12 @@ data_loader = get_data_loader(config['data'], config['img_path'], config['img_si
 for it, (grid, image) in enumerate(data_loader):
 
     # Input coordinates (x,y) grid and target image
-    grid = grid.cuda()  # [bs, h, w, 2], [0, 1]
-    image = image.cuda()  # [bs, h, w, c], [0, 1]
+    #grid = grid.cuda()  # [bs, h, w, 2], [0, 1]
+    #image = image.cuda()  # [bs, h, w, c], [0, 1]
     print(grid.shape, image.shape)
 
     # 2D parallel projection geometry
-    thetas = torch.linspace(0, np.pi, config['num_proj']+1)[:-1].cuda()
+    thetas = torch.linspace(0, np.pi, config['num_proj']+1)[:-1]
     print(thetas)
     projs = ct_parallel_project_2d_batch(image, thetas)  # [bs, n, w, c]
     print(projs.shape)

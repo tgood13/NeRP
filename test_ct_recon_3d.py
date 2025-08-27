@@ -14,7 +14,7 @@ import numpy as np
 from networks import Positional_Encoder, FFN, SIREN
 from utils import get_config, prepare_sub_folder, get_data_loader, save_image_3d
 from ct_geometry_projector import ConeBeam3DProjector
-from skimage.measure import compare_ssim
+from skimage.metrics import structural_similarity
 
 
 parser = argparse.ArgumentParser()
@@ -57,7 +57,7 @@ elif config['model'] == 'FFN':
     model = FFN(config['net'])
 else:
     raise NotImplementedError
-model.cuda()
+#model.cuda()
 model.eval()
 
 # Load pretrain model
@@ -89,8 +89,8 @@ else:
 
 for it, (grid, image) in enumerate(data_loader):
     # Input coordinates (x,y) grid and target image
-    grid = grid.cuda()  # [bs, z, x, y, 3], [0, 1]
-    image = image.cuda()  # [bs, z, x, y, 1], [0, 1]
+    #grid = grid.cuda()  # [bs, z, x, y, 3], [0, 1]
+    #image = image.cuda()  # [bs, z, x, y, 1], [0, 1]
     print(grid.shape, image.shape)
 
     # Data loading
@@ -105,7 +105,7 @@ for it, (grid, image) in enumerate(data_loader):
         test_psnr = - 10 * torch.log10(2 * test_loss).item()
         test_loss = test_loss.item()
 
-        test_ssim = compare_ssim(test_output.transpose(1,4).squeeze().cpu().numpy(), test_data[1].transpose(1,4).squeeze().cpu().numpy(), multichannel=True)  # [x, y, z] # treat the last dimension of the array as channels
+        test_ssim = structural_similarity(test_output.transpose(1,4).squeeze().cpu().numpy(), test_data[1].transpose(1,4).squeeze().cpu().numpy(), multichannel=True)  # [x, y, z] # treat the last dimension of the array as channels
 
     save_image_3d(test_output, slice_idx, os.path.join(image_directory, "recon_{}_{:.4g}dB_ssim{:.4g}.png".format(opts.iter, test_psnr, test_ssim)))
     print("[Testing Iteration: {}] Test loss: {:.4g} | Test psnr: {:.4g} | Test ssim: {:.4g}".format(opts.iter, test_loss, test_psnr, test_ssim))
